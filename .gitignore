@@ -1,4 +1,7 @@
 .github
 __pycache__
 build
+*.jar
+*.interp
+*.tokens
 
