@@ -44,7 +44,8 @@ def main() -> None:
     if error_message:
         lines.append(error_message)
 
-    trailing_newline = "" if error_message else ("\n" if lines else "")
+    # Sempre adiciona newline final (tanto para tokens quanto para erros)
+    trailing_newline = "\n" if lines else ""
     output_path.write_text("\n".join(lines) + trailing_newline, encoding="utf-8")
 
 

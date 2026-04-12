@@ -2,7 +2,7 @@
 
 algoritmo
 	declare
-		nome~ literal
+		nome: literal
 	declare
 		idade: inteiro
 

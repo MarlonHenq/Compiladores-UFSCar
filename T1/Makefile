@@ -1,63 +1,71 @@
-PY=python3
-TEST_DIR=casos_de_teste
-BUILD_DIR=build
-ENTRADAS=$(wildcard $(TEST_DIR)/entrada*)
+# =============================================================================
+# Makefile — Analisador Léxico da Linguagem LA (T1)
+# =============================================================================
+# Trabalho 1 – Construção de Compiladores – UFSCar (DC)
+# Alunos: Marlon Henrique Sanches (RA819464) | Samuel Gerga Martins (RA821772)
+#
+# Targets principais:
+#   make run       — executa o analisador léxico (requer INPUT e OUTPUT)
+#   make test      — roda os 37 casos de teste e compara com saídas esperadas
+#   make clean     — remove arquivos gerados
+#   make help      — mostra instruções de uso
+# =============================================================================
 
-# Suporte a chamada posicional `make <entrada> <saida>`
-# Ex.: `make $(TEST_DIR)/entrada1 saida`
-ARGS=$(filter-out run test clean help,$(MAKECMDGOALS))
+PY          = python3
+TEST_DIR    = 1.casos_teste_t1
+ENTRADA_DIR = $(TEST_DIR)/entrada
+SAIDA_DIR   = $(TEST_DIR)/saida
+BUILD_DIR   = build
 
-# Quando exatamente dois argumentos são passados, executa o lexer diretamente
-ifeq ($(words $(ARGS)),2)
-.PHONY: $(firstword $(ARGS)) $(word 2,$(ARGS))
-$(firstword $(ARGS)) $(word 2,$(ARGS)):
-	@in_file=$(word 1,$(ARGS)); out_file=$(word 2,$(ARGS)); \
-	$(PY) main.py "$$in_file" "$$out_file"
-endif
+# Lista todos os arquivos de entrada dos casos de teste
+ENTRADAS = $(wildcard $(ENTRADA_DIR)/*.txt)
 
-.PHONY: help run run-positional test clean
+.PHONY: help run test clean
 
+# Target padrão: mostra instruções de uso
 help:
-	@echo "Uso:";
-	@echo "  make <arquivo_entrada> <arquivo_saida>   # executa lexer";
-	@echo "  make run INPUT=arq_entrada OUTPUT=arq_saida";
-	@echo "  make test                                # roda casos em $(TEST_DIR)/";
-	@echo "  make clean                               # remove build/";
+	@echo "=== Analisador Léxico LA (T1) ==="
+	@echo ""
+	@echo "Uso:"
+	@echo "  make run INPUT=entrada.txt OUTPUT=saida.txt  # Executa o analisador"
+	@echo "  make test                                    # Roda os 37 casos de teste"
+	@echo "  make clean                                   # Remove arquivos gerados"
 
+# Executa o analisador léxico com os caminhos de entrada e saída fornecidos
 run:
 	@if [ -z "$(INPUT)" ] || [ -z "$(OUTPUT)" ]; then \
-		echo "Uso: make run INPUT=arquivo_de_entrada OUTPUT=arquivo_de_saida"; exit 1; \
+		echo "Uso: make run INPUT=arquivo_entrada OUTPUT=arquivo_saida"; exit 1; \
 	fi
 	$(PY) main.py "$(INPUT)" "$(OUTPUT)"
 
-# Executa todos os casos de teste presentes em casos_de_teste/ e compara com as saídas esperadas
-# Saídas geradas vão para build/saidaX
-
+# Roda todos os 37 casos de teste e compara as saídas geradas com as esperadas
+# Saídas geradas ficam em build/ para não poluir o diretório de trabalho
 test:
 	@mkdir -p "$(BUILD_DIR)"
-	@status=0; \
-	for in_file in $(ENTRADAS); do \
-		base=$$(basename $$in_file); \
-		num=$${base#entrada}; \
-		out_file="$(BUILD_DIR)/saida$${num}"; \
-		exp_file="$(TEST_DIR)/saida$${num}"; \
-		echo "[TEST] $$in_file -> $$out_file"; \
-		$(PY) main.py "$$in_file" "$$out_file"; \
-		if ! diff -u "$$exp_file" "$$out_file"; then \
-			echo "  Falhou: $$in_file"; status=1; \
+	@total=0; passou=0; falhou=0; \
+	for entrada in $(ENTRADAS); do \
+		base=$$(basename "$$entrada"); \
+		saida_gerada="$(BUILD_DIR)/$$base"; \
+		saida_esperada="$(SAIDA_DIR)/$$base"; \
+		total=$$((total + 1)); \
+		$(PY) main.py "$$entrada" "$$saida_gerada" 2>/dev/null; \
+		if [ ! -f "$$saida_esperada" ]; then \
+			echo "[SKIP] $$base (saída esperada não encontrada)"; \
+		elif diff -q "$$saida_esperada" "$$saida_gerada" > /dev/null 2>&1; then \
+			echo "[OK]   $$base"; \
+			passou=$$((passou + 1)); \
 		else \
-			echo "  OK"; \
+			echo "[FAIL] $$base"; \
+			diff -u "$$saida_esperada" "$$saida_gerada" 2>/dev/null || true; \
+			falhou=$$((falhou + 1)); \
 		fi; \
 	done; \
-	if [ $$status -ne 0 ]; then \
-		echo "Alguns testes falharam."; exit $$status; \
-	else \
-		echo "Todos os testes passaram."; \
-	fi
+	echo ""; \
+	echo "=== Resultado: $$passou/$$total passaram, $$falhou falharam ==="; \
+	if [ $$falhou -ne 0 ]; then exit 1; fi
 
+# Remove saídas de teste geradas
 clean:
-	@rm -rf "$(BUILD_DIR)"
-
-# Evita que make tente criar arquivos com os nomes dos argumentos posicionais
-%::
-	@:
+	rm -rf "$(BUILD_DIR)"
+	rm -rf __pycache__
+	@echo "[OK] Arquivos gerados removidos."
