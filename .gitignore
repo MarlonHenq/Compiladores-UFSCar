@@ -4,4 +4,4 @@ build
 *.jar
 *.interp
 *.tokens
-
+.cursorrules
